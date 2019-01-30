@@ -128,7 +128,22 @@ class KnowledgeBase(object):
         printv("Retracting {!r}", 0, verbose, [fact_or_rule])
         ####################################################
         # Student code goes here
+        queue = []
+        if factq(fact_or_rule):
+            initial = self._get_fact(fact_or_rule) # THIS WAS LITERALLY THE MOST ANNOYING THING EVER, I SPENT HOURS DEBUGGING... And my main problem was that fact_or_rule isn't actually the real fact/rule in the knowledgebase... -_-" grrrrrrrrrrrrrrrrrr
+        else:
+            initial = self._get_rule(fact_or_rule)
+        queue.append(initial)
         
+        while (queue):
+            curr_node = queue.pop(0)
+            if ( (factq(curr_node) and (not curr_node.supported_by)) or (not ((factq(curr_node)) or (curr_node.asserted))) ):
+                for node in (curr_node.supports_facts + curr_node.supports_rules):
+                    queue.append(node)
+                    for pair in node.supported_by:
+                        if (curr_node in pair): node.supported_by.remove(pair)
+                        #print("THIS IS WORKING")
+                self.facts.remove(curr_node) if factq(curr_node) else self.rules.remove(curr_node)        
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
@@ -146,3 +161,30 @@ class InferenceEngine(object):
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+        
+
+        bindings = match(fact.statement, rule.lhs[0])
+        
+        if (bindings):
+            lhs_statements = [instantiate(rule_lhs_statement, bindings) for rule_lhs_statement in rule.lhs[1:]]
+            rhs_statement = instantiate(rule.rhs, bindings)
+
+            if len(rule.lhs) > 1:
+                new_rule = Rule([lhs_statements, rhs_statement], [[fact, rule]])
+                kb.kb_add(new_rule)
+                fact.supports_rules.append(new_rule)
+                rule.supports_rules.append(new_rule)
+            else: 
+                new_fact = Fact(rhs_statement, [[fact, rule]])
+                #print(fact.statement, " <- This helped infer this -> ",new_fact.statement)
+                kb.kb_add(new_fact)
+                fact.supports_facts.append(new_fact)
+                rule.supports_facts.append(new_fact)
+                #print("Facts the current fact supports: ", [fact.supports_facts[i].statement for i in range(len(fact.supports_facts))])
+        else:
+            pass
+
+
+
+
+
