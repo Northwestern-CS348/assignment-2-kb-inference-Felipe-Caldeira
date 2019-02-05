@@ -128,23 +128,24 @@ class KnowledgeBase(object):
         printv("Retracting {!r}", 0, verbose, [fact_or_rule])
         ####################################################
         # Student code goes here
-        queue = []
-        queue.append(fact_or_rule)
+        
+        FR = fact_or_rule
 
-        while (queue): 
-            curr_node = queue.pop(0)
-            if factq(curr_node):
-                curr_node = self._get_fact(curr_node)
-            else:
-                curr_node = self._get_rule(curr_node)
-            
+        if factq(FR):
+            FR = self._get_fact(FR)
+        elif isinstance(FR, Rule):
+            FR = self._get_rule(FR)
+        else:
+            return
 
-            if ( (factq(curr_node) and (not curr_node.supported_by)) or (not factq(curr_node) and not curr_node.asserted and not curr_node.supported_by) ):
-                for node in (curr_node.supports_facts + curr_node.supports_rules):
-                    for pair in node.supported_by:
-                        if (curr_node in pair): node.supported_by.remove(pair)
-                    queue.append(node)
-                self.facts.remove(curr_node) if factq(curr_node) else self.rules.remove(curr_node)        
+        if ((not factq(FR) and FR.asserted) or FR.supported_by): return
+
+        for fr in (FR.supports_facts + FR.supports_rules):
+            for pair in fr.supported_by:
+                if FR in pair: 
+                    self._get_fact(fr).supported_by.remove(pair) if factq(fr) else self._get_rule(fr).supported_by.remove(pair)
+            self.kb_retract(fr)
+        self.facts.remove(FR) if factq(FR) else self.rules.remove(FR)
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
