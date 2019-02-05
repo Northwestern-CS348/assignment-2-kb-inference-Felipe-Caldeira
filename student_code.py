@@ -100,7 +100,7 @@ class KnowledgeBase(object):
         Returns:
             listof Bindings|False - list of Bindings if result found, False otherwise
         """
-        print("Asking {!r}".format(fact))
+        #print("Asking {!r}".format(fact))
         if factq(fact):
             f = Fact(fact.statement)
             bindings_lst = ListOfBindings()
@@ -129,20 +129,21 @@ class KnowledgeBase(object):
         ####################################################
         # Student code goes here
         queue = []
-        if factq(fact_or_rule):
-            initial = self._get_fact(fact_or_rule) # THIS WAS LITERALLY THE MOST ANNOYING THING EVER, I SPENT HOURS DEBUGGING... And my main problem was that fact_or_rule isn't actually the real fact/rule in the knowledgebase... -_-" grrrrrrrrrrrrrrrrrr
-        else:
-            initial = self._get_rule(fact_or_rule)
-        queue.append(initial)
-        
-        while (queue):
+        queue.append(fact_or_rule)
+
+        while (queue): 
             curr_node = queue.pop(0)
-            if ( (factq(curr_node) and (not curr_node.supported_by)) or (not ((factq(curr_node)) or (curr_node.asserted))) ):
+            if factq(curr_node):
+                curr_node = self._get_fact(curr_node)
+            else:
+                curr_node = self._get_rule(curr_node)
+            
+
+            if ( (factq(curr_node) and (not curr_node.supported_by)) or (not factq(curr_node) and not curr_node.asserted and not curr_node.supported_by) ):
                 for node in (curr_node.supports_facts + curr_node.supports_rules):
-                    queue.append(node)
                     for pair in node.supported_by:
                         if (curr_node in pair): node.supported_by.remove(pair)
-                        #print("THIS IS WORKING")
+                    queue.append(node)
                 self.facts.remove(curr_node) if factq(curr_node) else self.rules.remove(curr_node)        
 
 class InferenceEngine(object):
@@ -171,15 +172,15 @@ class InferenceEngine(object):
 
             if len(rule.lhs) > 1:
                 new_rule = Rule([lhs_statements, rhs_statement], [[fact, rule]])
-                kb.kb_add(new_rule)
                 fact.supports_rules.append(new_rule)
                 rule.supports_rules.append(new_rule)
+                kb.kb_assert(new_rule)
             else: 
                 new_fact = Fact(rhs_statement, [[fact, rule]])
                 #print(fact.statement, " <- This helped infer this -> ",new_fact.statement)
-                kb.kb_add(new_fact)
                 fact.supports_facts.append(new_fact)
                 rule.supports_facts.append(new_fact)
+                kb.kb_assert(new_fact)
                 #print("Facts the current fact supports: ", [fact.supports_facts[i].statement for i in range(len(fact.supports_facts))])
         else:
             pass
